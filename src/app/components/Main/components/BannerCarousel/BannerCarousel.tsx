@@ -22,11 +22,12 @@ const AUTOPLAY_INTERVAL = 5000;
 export default function BannerCarousel() {
   const [current, setCurrent] = useState(0);
   const [nextIdx, setNextIdx] = useState<number | null>(null);
+  const [ready, setReady] = useState(false);
   const currentRef = useRef(current);
   const isAnimating = useRef(false);
 
   const goTo = useCallback((n: number) => {
-    if (isAnimating.current || n === currentRef.current) return;
+    if (!ready || isAnimating.current || n === currentRef.current) return;
     isAnimating.current = true;
     setNextIdx(n);
     currentRef.current = n;
@@ -36,7 +37,7 @@ export default function BannerCarousel() {
       setNextIdx(null);
       isAnimating.current = false;
     }, TOTAL_ANIM);
-  }, []);
+  }, [ready]);
 
   const goPrev = useCallback(() => {
     goTo((currentRef.current - 1 + banners.length) % banners.length);
@@ -46,10 +47,17 @@ export default function BannerCarousel() {
     goTo((currentRef.current + 1) % banners.length);
   }, [goTo]);
 
+  // Затримка старту на 1 секунду після рендеру
   useEffect(() => {
+    const delay = setTimeout(() => setReady(true), 1000);
+    return () => clearTimeout(delay);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
     const timer = setInterval(goNext, AUTOPLAY_INTERVAL);
     return () => clearInterval(timer);
-  }, [goNext]);
+  }, [goNext, ready]);
 
   return (
     <section className="w-full">
