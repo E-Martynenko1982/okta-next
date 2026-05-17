@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import Header from "./components/Header/Header";
 import Sidebar from "./components/Sidebar/Sidebar";
+import MatrixBackground from "./components/Main/components/Matrix/Matrixbackground";
 
 const eUkraine = localFont({
   src: [
@@ -31,17 +32,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk" className={`${eUkraine.variable} h-full antialiased`}>
-      <body className="relative min-h-screen flex flex-col overflow-x-hidden">
-        {/* Shared background */}
+      <body className="relative min-h-screen flex flex-col overflow-x-hidden text-white">
+        {/* Shared background image */}
         <div
-          className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+          className="fixed inset-0 -z-50 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/images/bg.webp')" }}
         />
         <Header />
         <div className="flex flex-1 pt-20 justify-center">
           <div className="flex w-full max-w-350">
             <Sidebar />
-            <main className="flex-1 min-w-0">{children}</main>
+            <main className="relative flex-1 min-w-0 bg-transparent">
+              <MatrixBackground />
+              <div className="relative z-10 p-6">
+                {children}
+              </div>
+            </main>
           </div>
         </div>
       </body>

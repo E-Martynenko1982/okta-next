@@ -9,7 +9,7 @@ export default function MainSection() {
       <MatrixBackground />
 
       <main
-        className="flex flex-col gap-10 w-full px-4 py-8"
+        className="flex flex-col gap-10 w-full px-4 py-3"
         style={{ position: "relative", zIndex: 1 }}
       >
         <BannerCarousel />
