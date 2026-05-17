@@ -11,7 +11,7 @@ const categories = [
 
 export default function Sidebar() {
   return (
-    <aside className="sticky top-20 h-[calc(100vh-5rem)] w-64 shrink-0 pb-8 border-r border-white/10 hidden lg:flex flex-col bg-transparent overflow-y-auto">
+    <aside className="sticky top-20 h-[calc(100vh-5rem)] w-64 shrink-0 pb-8 border-r border-white/10 hidden lg:flex flex-col bg-transparent overflow-y-auto py-8">
       <nav className="px-4 flex-1">
         <ul className="space-y-4">
           {categories.map((category) => (

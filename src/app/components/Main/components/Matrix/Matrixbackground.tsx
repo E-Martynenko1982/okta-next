@@ -109,12 +109,15 @@ export default function MatrixBackground() {
       animId = requestAnimationFrame(draw);
     };
 
-    animId = requestAnimationFrame(draw);
+    const startTimeout = setTimeout(() => {
+      animId = requestAnimationFrame(draw);
+    }, 2000);
 
     const ro = new ResizeObserver(resize);
     ro.observe(canvas.parentElement ?? document.body);
 
     return () => {
+      clearTimeout(startTimeout);
       cancelAnimationFrame(animId);
       ro.disconnect();
     };
