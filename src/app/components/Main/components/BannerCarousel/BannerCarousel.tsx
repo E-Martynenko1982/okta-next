@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 
 const banners = [
@@ -13,173 +13,145 @@ const banners = [
   "/images/x1776342361m_okta-ua-baner-horotec-925-454-2026-12.webp.pagespeed.ic.xaXoDYINbJ.webp",
 ];
 
-const COLS = 5; // Кількість механічних панелей (оптимально для преміального вигляду)
-const ANIM_DURATION = 800; // Тривалість руху панелей (мс)
-const STAGGER_MS = 60; // Затримка між панелями для ефекту "хвилі"
-const TOTAL_ANIM = ANIM_DURATION + STAGGER_MS * (COLS - 1) + 50;
 const AUTOPLAY_INTERVAL = 5000;
 
 export default function BannerCarousel() {
   const [current, setCurrent] = useState(0);
-  const [nextIdx, setNextIdx] = useState<number | null>(null);
-  const [ready, setReady] = useState(false);
-  const currentRef = useRef(current);
-  const isAnimating = useRef(false);
+  const [radius, setRadius] = useState(350); // Динамічний радіус циліндра
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const goTo = useCallback((n: number) => {
-    if (!ready || isAnimating.current || n === currentRef.current) return;
-    isAnimating.current = true;
-    setNextIdx(n);
-    currentRef.current = n;
+  const totalSlides = banners.length;
+  // Крок кута для кожного слайда на колі (360 градусів / кількість слайдів)
+  const theta = 360 / totalSlides;
 
-    setTimeout(() => {
-      setCurrent(n);
-      setNextIdx(null);
-      isAnimating.current = false;
-    }, TOTAL_ANIM);
-  }, [ready]);
+  // Точний адаптивний розрахунок радіуса барабана при зміні розмірів екрана
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-  const goPrev = useCallback(() => {
-    goTo((currentRef.current - 1 + banners.length) % banners.length);
-  }, [goTo]);
+    const updateRadius = () => {
+      if (containerRef.current) {
+        const height = containerRef.current.clientHeight;
+        // Математична формула радіуса правильного багатогранника: 
+        // r = (висота_грані / 2) / tan(кута_кроку / 2)
+        const computedRadius = (height / 2) / Math.tan((theta * Math.PI) / 360);
+        // Додаємо мікро-зазор (+2px), щоб уникнути лінійних просвітів між стиками граней
+        setRadius(computedRadius + 2);
+      }
+    };
+
+    updateRadius();
+    window.addEventListener("resize", updateRadius);
+    return () => window.removeEventListener("resize", updateRadius);
+  }, [theta]);
 
   const goNext = useCallback(() => {
-    goTo((currentRef.current + 1) % banners.length);
-  }, [goTo]);
+    setCurrent((prev) => prev + 1);
+  }, []);
 
-  // Затримка старту на 1 секунду після рендеру
-  useEffect(() => {
-    const delay = setTimeout(() => setReady(true), 1000);
-    return () => clearTimeout(delay);
+  const goPrev = useCallback(() => {
+    setCurrent((prev) => prev - 1);
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
     const timer = setInterval(goNext, AUTOPLAY_INTERVAL);
     return () => clearInterval(timer);
-  }, [goNext, ready]);
+  }, [goNext]);
+
+  // Загальний кут повороту валу (барабана). Значення позитивне для прокрутки «вперед/вгору»
+  const carouselRotation = current * theta;
 
   return (
     <section className="w-full">
-      {/* Чисті CSS-анімації для плавного каліброваного зсуву панелей */}
-      <style>{`
-        @keyframes mechanicalSlideUp {
-          0% { transform: translateY(100%); }
-          100% { transform: translateY(0); }
-        }
-        @keyframes mechanicalSlideDown {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(0); }
-        }
-        @keyframes imageParallaxUp {
-          0% { transform: translateY(-20%) scale(1.05); filter: blur(4px); }
-          100% { transform: translateY(0) scale(1); filter: blur(0px); }
-        }
-        @keyframes imageParallaxDown {
-          0% { transform: translateY(20%) scale(1.05); filter: blur(4px); }
-          100% { transform: translateY(0) scale(1); filter: blur(0px); }
-        }
-      `}</style>
-
-      <div className="relative w-full overflow-hidden rounded-xl shadow-2xl aspect-925/454 bg-neutral-950 group">
+      <div 
+        ref={containerRef}
+        className="relative w-full overflow-hidden rounded-xl bg-neutral-950 group aspect-925/454"
+        style={{ perspective: "1500px" }} // Створює фокусну глибину для 3D-простору
+      >
         
-        {/* Базовий банер (поточний) */}
-        <div className="absolute inset-0">
-          <Image
-            src={banners[current]}
-            alt={`Банер ${current + 1}`}
-            fill
-            sizes="(max-width: 768px) 100vw, 925px"
-            className="object-cover transition-transform duration-700 ease-out"
-            priority
-          />
-          {/* Легке преміальне затемнення для глибини */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/10 pointer-events-none" />
+        {/* Тіло 3D-Барабана (Обертання навколо осі X) */}
+        <div
+          className="relative w-full h-full transition-transform duration-1000"
+          style={{
+            transformStyle: "preserve-3d",
+            // Відсуваємо барабан назад на довжину радіуса і крутимо по осі X
+            transform: `translateZ(-${radius}px) rotateX(${carouselRotation}deg)`,
+          }}
+        >
+          {banners.map((src, index) => {
+            // Кожна наступна сторінка зміщується на свій крок кута
+            const slideRotation = -index * theta;
+
+            return (
+              <div
+                key={index}
+                className="absolute inset-0 w-full h-full"
+                style={{
+                  backfaceVisibility: "hidden", // Приховуємо картинки, що опинилися ззаду валу
+                  // Повертаємо грань на її кут і виштовхуємо з центру на радіус вперед
+                  transform: `rotateX(${slideRotation}deg) translateZ(${radius}px)`,
+                }}
+              >
+                <Image
+                  src={src}
+                  alt={`Обладнання годинникаря — Слайд ${index + 1}`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 925px"
+                  className="object-cover select-none"
+                  priority={index === 0}
+                />
+                
+                {/* Градієнтне затінення верхнього та нижнього країв барабана. 
+                    Воно створює преміальний об'єм та ефект того, що картинка йде в тінь корпусу */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/70 pointer-events-none opacity-90 transition-opacity duration-300" />
+              </div>
+            );
+          })}
         </div>
 
-        {/* Шар механічних панелей, що перекриває сцену під час транзиції */}
-        {nextIdx !== null && (
-          <div className="absolute inset-0 z-10 flex pointer-events-none">
-            {Array.from({ length: COLS }).map((_, i) => {
-              const isEven = i % 2 === 0;
-              const delay = `${i * STAGGER_MS}ms`;
-              const widthPercent = 100 / COLS;
+        {/* Бічні інженерні тіні корпусу для фокусування на центрі */}
+        <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-black/30 to-transparent pointer-events-none" />
+        <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-black/30 to-transparent pointer-events-none" />
 
-              return (
-                <div
-                  key={i}
-                  style={{
-                    position: "relative",
-                    width: `${widthPercent}%`,
-                    height: "100%",
-                    overflow: "hidden",
-                    // Суміжні панелі рухаються назустріч одна одній (вгору і вниз)
-                    animation: `${isEven ? "mechanicalSlideUp" : "mechanicalSlideDown"} ${ANIM_DURATION}ms ${delay} cubic-bezier(0.16, 1, 0.3, 1) both`,
-                    // Тонка делікатна лінія між панелями, що підкреслює механіку розрізу
-                    boxShadow: "0 0 15px rgba(0,0,0,0.5)",
-                    borderLeft: i > 0 ? "1px solid rgba(255,255,255,0.04)" : "none",
-                  }}
-                >
-                  {/* Внутрішній контейнер зворотно-пропорційно розтягується і зсувається, 
-                      щоб картинка склеювалася в єдине ціле без спотворень */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: `-${i * 100}%`,
-                      width: `${COLS * 100}%`,
-                      height: "100%",
-                      // Паралакс-ефект: картинка рухається всередині панелі протилежно до руху самої панелі
-                      animation: `${isEven ? "imageParallaxUp" : "imageParallaxDown"} ${ANIM_DURATION}ms ${delay} cubic-bezier(0.16, 1, 0.3, 1) both`,
-                    }}
-                  >
-                    <Image
-                      src={banners[nextIdx]}
-                      alt=""
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Елементи керування: Стрілка вліво */}
+        {/* Навігація: Стрілка вгору/вліво */}
         <button
           onClick={goPrev}
-          aria-label="Попередній банер"
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-11 h-11 rounded-full bg-neutral-900/60 hover:bg-neutral-900/95 text-white/80 hover:text-white border border-white/10 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:translate-x-1"
+          aria-label="Попередній інструмент"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-11 h-11 rounded-full bg-neutral-900/60 hover:bg-neutral-900 border border-white/10 text-white shadow-2xl backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
 
-        {/* Елементи керування: Стрілка вправо */}
+        {/* Навігація: Стрілка вниз/вправо */}
         <button
           onClick={goNext}
-          aria-label="Наступний банер"
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-11 h-11 rounded-full bg-neutral-900/60 hover:bg-neutral-900/95 text-white/80 hover:text-white border border-white/10 shadow-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:-translate-x-1"
+          aria-label="Наступний інструмент"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex items-center justify-center w-11 h-11 rounded-full bg-neutral-900/60 hover:bg-neutral-900 border border-white/10 text-white shadow-2xl backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-300"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
           </svg>
         </button>
 
-        {/* Індикатори (Крапки) — мінімалістичні інженерні риски */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2.5 bg-neutral-950/40 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/5">
-          {banners.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goTo(index)}
-              aria-label={`Перейти до банера ${index + 1}`}
-              className={`h-1 rounded-full transition-all duration-300 ${
-                index === current ? "w-6 bg-white" : "w-2 bg-white/30 hover:bg-white/60"
-              }`}
-            />
-          ))}
+        {/* Хронометричні індикатори (Крапки під барабаном) */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2.5 bg-neutral-950/50 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/5">
+          {banners.map((_, index) => {
+            const normalizedCurrent = ((current % totalSlides) + totalSlides) % totalSlides;
+            return (
+              <button
+                key={index}
+                onClick={() => {
+                  const diff = index - normalizedCurrent;
+                  setCurrent((prev) => prev + diff);
+                }}
+                aria-label={`Калібрування банера ${index + 1}`}
+                className={`h-1 rounded-full transition-all duration-500 ${
+                  index === normalizedCurrent ? "w-6 bg-white" : "w-1.5 bg-white/30 hover:bg-white/60"
+                }`}
+              />
+            );
+          })}
         </div>
       </div>
     </section>
