@@ -55,7 +55,7 @@ export default function Header() {
         {/* Right Side: Navigation and Search */}
         <div className="flex gap-4">
           <nav className="lg:flex lg:flex-row-reverse items-center gap-8">
-            <div className="flex justify-end gap-4">
+            <div className="flex justify-end gap-2">
               <Search />
               <Link href="/cart" className="text-white hover:text-white/80">
                 <svg
