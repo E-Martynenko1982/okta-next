@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="uk" className={`${eUkraine.variable} h-full antialiased`}>
+    <html lang="uk" className={`${eUkraine.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="relative min-h-screen flex flex-col overflow-x-hidden text-white">
         {/* Shared background image */}
         <div
